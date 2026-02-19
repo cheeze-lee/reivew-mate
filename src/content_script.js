@@ -13,7 +13,14 @@
     maxChangedFileCountInList: 60,
     maxRawFiles: 6,
     maxRawFileChars: 20000,
-    maxTotalRawChars: 60000
+    maxTotalRawChars: 60000,
+    maxRepoSearchTerms: 6,
+    maxRepoSearchQueries: 4,
+    maxRepoSearchResultsPerQuery: 8,
+    maxRepoWideFiles: 8,
+    maxRepoWideFileChars: 12000,
+    maxRepoWideTotalChars: 90000,
+    maxRepoWideTermChars: 48
   };
 
   const state = {
@@ -34,6 +41,11 @@
       diffTruncated: false,
       rawFiles: [], // { path, url, text, truncated }
       rawTotalChars: 0,
+      repoWideFiles: [], // { path, url, text, truncated, term }
+      repoWideTotalChars: 0,
+      repoWideTerms: [],
+      repoWideKey: null,
+      repoWideError: null,
       loading: false,
       error: null
     }
@@ -251,6 +263,11 @@
     state.context.diffTruncated = false;
     state.context.rawFiles = [];
     state.context.rawTotalChars = 0;
+    state.context.repoWideFiles = [];
+    state.context.repoWideTotalChars = 0;
+    state.context.repoWideTerms = [];
+    state.context.repoWideKey = null;
+    state.context.repoWideError = null;
     state.context.error = null;
 
     updateSubtitle();
@@ -319,6 +336,263 @@
     const text = await res.text();
     const { text: clipped, truncated } = truncateText(text, maxChars);
     return { path, url, text: clipped, truncated };
+  }
+
+  const REPO_SEARCH_STOPWORDS = new Set([
+    "the",
+    "and",
+    "for",
+    "with",
+    "from",
+    "that",
+    "this",
+    "there",
+    "into",
+    "about",
+    "review",
+    "reviews",
+    "comment",
+    "comments",
+    "code",
+    "files",
+    "file",
+    "diff",
+    "repo",
+    "github",
+    "model",
+    "openai",
+    "please",
+    "help",
+    "test",
+    "tests",
+    "risk",
+    "risks",
+    "security",
+    "architecture",
+    "change",
+    "changes",
+    "api",
+    "옵션",
+    "리뷰",
+    "코드",
+    "변경",
+    "파일",
+    "테스트",
+    "보안",
+    "아키텍처",
+    "요약",
+    "질문",
+    "요청"
+  ]);
+
+  const NON_SOURCE_EXTENSIONS = [
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".ico",
+    ".pdf",
+    ".zip",
+    ".gz",
+    ".tar",
+    ".mp4",
+    ".mov",
+    ".avi",
+    ".mp3",
+    ".wav",
+    ".ttf",
+    ".otf",
+    ".woff",
+    ".woff2",
+    ".eot",
+    ".jar",
+    ".class",
+    ".lock"
+  ];
+
+  function normalizeRepoSearchTerm(term) {
+    const raw = String(term || "").trim();
+    if (!raw) return "";
+    const cleaned = raw.replace(/[`"'\\]/g, " ").replace(/\s+/g, " ").trim();
+    if (!cleaned) return "";
+    return cleaned.length > LIMITS.maxRepoWideTermChars ? cleaned.slice(0, LIMITS.maxRepoWideTermChars) : cleaned;
+  }
+
+  function pathTokenize(path) {
+    const parts = String(path || "")
+      .split("/")
+      .map((s) => String(s || "").trim())
+      .filter(Boolean);
+    const out = [];
+    for (const p of parts.slice(-3)) {
+      const stem = p.replace(/\.[^.]+$/, "");
+      if (!stem) continue;
+      out.push(stem);
+    }
+    return out;
+  }
+
+  function looksUsefulRepoPath(path) {
+    const p = String(path || "").toLowerCase();
+    if (!p || p.endsWith("/")) return false;
+    if (
+      p.includes("/node_modules/") ||
+      p.includes("/dist/") ||
+      p.includes("/build/") ||
+      p.includes("/coverage/") ||
+      p.includes("/.next/") ||
+      p.includes("/__pycache__/") ||
+      p.includes("/vendor/")
+    ) {
+      return false;
+    }
+    return !NON_SOURCE_EXTENSIONS.some((ext) => p.endsWith(ext));
+  }
+
+  function extractAsciiTokens(text) {
+    const m = String(text || "").match(/[A-Za-z_][A-Za-z0-9_]{2,}/g);
+    return Array.isArray(m) ? m : [];
+  }
+
+  function extractRepoSearchTerms(userText, selection, fileInfo, pr) {
+    const out = [];
+    const seen = new Set();
+
+    function addTerm(v) {
+      const t = normalizeRepoSearchTerm(v);
+      if (!t) return;
+      const lower = t.toLowerCase();
+      if (REPO_SEARCH_STOPWORDS.has(lower)) return;
+      if (lower.length < 3) return;
+      if (/^\d+$/.test(lower)) return;
+      if (seen.has(lower)) return;
+      seen.add(lower);
+      out.push(t);
+    }
+
+    const ident = extractIdentifierFromSelection(selection);
+    if (ident) addTerm(ident);
+
+    for (const tok of extractAsciiTokens(`${userText || ""}\n${selection || ""}`)) addTerm(tok);
+    for (const tok of pathTokenize(fileInfo?.path || "")) addTerm(tok);
+
+    // Fallback terms for non-English prompts where identifier extraction can be sparse.
+    if (out.length < LIMITS.maxRepoSearchTerms && Array.isArray(pr?.files)) {
+      for (const p of pr.files.slice(0, 16)) {
+        for (const tok of pathTokenize(p)) addTerm(tok);
+        if (out.length >= LIMITS.maxRepoSearchTerms) break;
+      }
+    }
+
+    if (out.length < LIMITS.maxRepoSearchTerms) {
+      const repoName = String(pr?.headRepository || "").split("/").pop();
+      addTerm(repoName);
+    }
+
+    return out.slice(0, LIMITS.maxRepoSearchTerms);
+  }
+
+  async function searchRepoCodePaths(repo, terms) {
+    const query = `
+      query($query: String!, $first: Int!) {
+        search(type: CODE, query: $query, first: $first) {
+          edges {
+            node {
+              ... on Blob {
+                url
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const found = new Map(); // path -> { path, term }
+    let firstError = null;
+    const pickedTerms = terms.slice(0, LIMITS.maxRepoSearchQueries);
+
+    for (const term of pickedTerms) {
+      const q = `repo:${repo} ${term}`;
+      try {
+        const data = await ghGraphql(query, { query: q, first: LIMITS.maxRepoSearchResultsPerQuery });
+        const edges = Array.isArray(data?.search?.edges) ? data.search.edges : [];
+        for (const edge of edges) {
+          const url = edge?.node?.url;
+          if (!url) continue;
+          const path = parsePathFromBlobUrl(url);
+          if (!path || !looksUsefulRepoPath(path)) continue;
+          if (!found.has(path)) found.set(path, { path, term });
+        }
+      } catch (e) {
+        if (!firstError) firstError = e;
+      }
+    }
+
+    if (found.size === 0 && firstError) throw firstError;
+    return Array.from(found.values());
+  }
+
+  async function ensureRepoWideFiles(userText) {
+    await ensurePrMeta();
+    const pr = state.context.pr;
+    if (!pr?.headRepository || !pr?.headRefOid) return;
+
+    const selection = state.includeSelection ? getSelectedText() : "";
+    const fileInfo = getSelectionFileInfo();
+    const terms = extractRepoSearchTerms(userText, selection, fileInfo, pr);
+    const key = `${pr.headRepository}@${pr.headRefOid}|${terms.join("|")}`;
+
+    if (state.context.repoWideKey === key && state.context.repoWideFiles.length) return;
+
+    state.context.repoWideFiles = [];
+    state.context.repoWideTotalChars = 0;
+    state.context.repoWideTerms = terms;
+    state.context.repoWideKey = key;
+    state.context.repoWideError = null;
+
+    if (terms.length === 0) {
+      state.context.repoWideError = "전체 리포 탐색용 검색어를 추출하지 못했습니다.";
+      updateSubtitle();
+      return;
+    }
+
+    try {
+      state.context.loading = true;
+      updateSubtitle();
+
+      const hits = await searchRepoCodePaths(pr.headRepository, terms);
+      if (hits.length === 0) {
+        state.context.repoWideError = `리포 코드 검색 결과가 없습니다. (terms: ${terms.join(", ")})`;
+        return;
+      }
+
+      const changedSet = new Set(Array.isArray(pr.files) ? pr.files : []);
+      const orderedHits = hits.slice().sort((a, b) => Number(changedSet.has(a.path)) - Number(changedSet.has(b.path)));
+
+      const picked = [];
+      let totalChars = 0;
+      for (const hit of orderedHits) {
+        if (picked.length >= LIMITS.maxRepoWideFiles) break;
+        if (totalChars >= LIMITS.maxRepoWideTotalChars) break;
+        const raw = await fetchRawFile(pr.headRepository, pr.headRefOid, hit.path, LIMITS.maxRepoWideFileChars);
+        if (!raw) continue;
+        picked.push({ ...raw, term: hit.term, changed: changedSet.has(hit.path) });
+        totalChars += (raw.text || "").length;
+      }
+
+      state.context.repoWideFiles = picked;
+      state.context.repoWideTotalChars = totalChars;
+      if (picked.length === 0) {
+        state.context.repoWideError = "리포 탐색 결과에서 읽을 수 있는 텍스트 파일을 찾지 못했습니다.";
+      }
+    } catch (e) {
+      state.context.repoWideError = String(e?.message || e);
+    } finally {
+      state.context.loading = false;
+      updateSubtitle();
+    }
   }
 
   function escapeRegex(s) {
@@ -698,6 +972,28 @@
       }
     }
 
+    if (state.context.repoWideFiles.length) {
+      const terms = state.context.repoWideTerms.join(", ");
+      pieces.push(
+        `전체 리포 탐색 컨텍스트(자동, 검색어: ${terms || "n/a"}, 최대 ${LIMITS.maxRepoWideFiles}개, 파일당 ${LIMITS.maxRepoWideFileChars} chars, 총 ${LIMITS.maxRepoWideTotalChars} chars)`
+      );
+      for (const f of state.context.repoWideFiles) {
+        const tag = [];
+        if (f.changed) tag.push("changed-file");
+        if (f.term) tag.push(`match:${f.term}`);
+        const tagText = tag.length ? ` [${tag.join(", ")}]` : "";
+        pieces.push(`파일: ${f.path}${tagText}${f.truncated ? " (truncated)" : ""}`);
+        pieces.push("```");
+        pieces.push(f.text);
+        pieces.push("```");
+        pieces.push(`raw: ${f.url}`);
+      }
+    } else if (state.context.repoWideError) {
+      pieces.push(`전체 리포 탐색을 불러오지 못했습니다: ${state.context.repoWideError}`);
+    } else {
+      pieces.push("전체 리포 탐색 컨텍스트가 아직 로드되지 않았습니다.");
+    }
+
     if (state.context.error) pieces.push(`(컨텍스트 에러) ${state.context.error}`);
 
     pieces.push("질문/요청:");
@@ -773,6 +1069,8 @@
     if (ctx.pr) parts.push(`PR files:${ctx.pr.totalFiles || ctx.pr.files?.length || 0}`);
     if (ctx.diff) parts.push(`diff:${Math.round((ctx.diff.length || 0) / 1000)}k`);
     if (ctx.rawFiles?.length) parts.push(`raw:${ctx.rawFiles.length}`);
+    if (ctx.repoWideFiles?.length) parts.push(`repo:${ctx.repoWideFiles.length}`);
+    if (ctx.repoWideError) parts.push("repo ctx err");
     if (ctx.error) parts.push("ctx err");
     subtitle.textContent = parts.join(" · ") || "GitHub PR에서 바로 질의응답";
   }
@@ -795,10 +1093,11 @@
 
     const requestId = uuid();
 
-    // Ensure repo/PR context is loaded (as requested by toggles).
+    // Ensure repo/PR context is loaded.
     await ensurePrMeta();
     if (state.includePrDiff) await ensurePrDiff();
     if (state.includePrFiles) await ensurePrFilesRaw();
+    await ensureRepoWideFiles(userText);
 
     // Build the model-facing full content (includes selection + repo context).
     const userContentFull = buildUserContentFull(userText);
@@ -1171,12 +1470,15 @@
       await ensurePrMeta();
       if (state.includePrDiff) await ensurePrDiff();
       if (state.includePrFiles) await ensurePrFilesRaw();
+      const hint = String(document.querySelector("#reviewmate-input")?.value || "").trim();
+      await ensureRepoWideFiles(hint);
 
       const pr = state.context.pr;
       if (pr) {
+        const repoStatus = state.context.repoWideError ? `err(${state.context.repoWideError})` : String(state.context.repoWideFiles.length);
         pushMsg(
           "assistant",
-          `PR 컨텍스트 로드됨: files=${pr.totalFiles || pr.files?.length || 0} diff=${state.context.diff ? "yes" : "no"} raw=${state.context.rawFiles.length}`
+          `PR 컨텍스트 로드됨: files=${pr.totalFiles || pr.files?.length || 0} diff=${state.context.diff ? "yes" : "no"} raw=${state.context.rawFiles.length} repo=${repoStatus}`
         );
       } else if (state.context.error) {
         pushMsg("assistant", `PR 컨텍스트 로드 실패: ${state.context.error}`);
@@ -1300,6 +1602,11 @@
         state.context.diff = null;
         state.context.rawFiles = [];
         state.context.rawTotalChars = 0;
+        state.context.repoWideFiles = [];
+        state.context.repoWideTotalChars = 0;
+        state.context.repoWideTerms = [];
+        state.context.repoWideKey = null;
+        state.context.repoWideError = null;
         state.context.error = null;
         state.context.loading = false;
         updateSubtitle();
