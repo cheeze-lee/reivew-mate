@@ -1,0 +1,307 @@
+:root {
+  --rm-bg: #0b1220;
+  --rm-panel: #0f172a;
+  --rm-border: rgba(148, 163, 184, 0.25);
+  --rm-text: #e2e8f0;
+  --rm-muted: rgba(226, 232, 240, 0.72);
+  --rm-accent: #22c55e;
+  --rm-accent2: #38bdf8;
+  --rm-danger: #ef4444;
+  --rm-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+  --rm-radius: 14px;
+  --rm-font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica,
+    Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+#reviewmate-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--rm-border);
+  background: linear-gradient(145deg, rgba(34, 197, 94, 0.18), rgba(56, 189, 248, 0.12));
+  color: var(--rm-text);
+  font: 700 14px/1 var(--rm-font);
+  box-shadow: var(--rm-shadow);
+  z-index: 2147483647;
+  cursor: pointer;
+}
+
+#reviewmate-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 72px;
+  width: min(520px, calc(100vw - 32px));
+  height: min(72vh, 760px);
+  display: none;
+  grid-template-rows: auto auto 1fr auto;
+  border-radius: var(--rm-radius);
+  border: 1px solid var(--rm-border);
+  background: radial-gradient(1200px 700px at 20% 10%, rgba(56, 189, 248, 0.14), transparent 60%),
+    radial-gradient(900px 520px at 90% 15%, rgba(34, 197, 94, 0.18), transparent 55%),
+    var(--rm-panel);
+  box-shadow: var(--rm-shadow);
+  z-index: 2147483647;
+  overflow: hidden;
+  color: var(--rm-text);
+  font-family: var(--rm-font);
+}
+
+#reviewmate-panel.rm-open {
+  display: grid;
+}
+
+.rm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rm-border);
+  background: rgba(2, 6, 23, 0.35);
+  backdrop-filter: blur(10px);
+}
+
+.rm-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rm-title strong {
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+
+.rm-title span {
+  font-size: 11px;
+  color: var(--rm-muted);
+}
+
+.rm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.rm-btn {
+  border: 1px solid var(--rm-border);
+  background: rgba(15, 23, 42, 0.75);
+  color: var(--rm-text);
+  font: 600 12px/1 var(--rm-font);
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.rm-btn:hover {
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+.rm-btn.rm-danger {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.rm-quick {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rm-border);
+  overflow-x: auto;
+}
+
+.rm-pill {
+  white-space: nowrap;
+  border: 1px solid var(--rm-border);
+  background: rgba(2, 6, 23, 0.35);
+  color: var(--rm-text);
+  font: 600 12px/1 var(--rm-font);
+  padding: 8px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.rm-pill:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.rm-body {
+  padding: 12px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rm-msg {
+  border: 1px solid var(--rm-border);
+  border-radius: 14px;
+  padding: 10px 10px;
+  background: rgba(2, 6, 23, 0.25);
+}
+
+.rm-msg.rm-user {
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.rm-msg.rm-assistant {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.rm-msg .rm-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  color: var(--rm-muted);
+  font-size: 11px;
+}
+
+.rm-mini {
+  margin-left: 8px;
+  border: 1px solid var(--rm-border);
+  background: rgba(15, 23, 42, 0.55);
+  color: var(--rm-text);
+  font: 700 11px/1 var(--rm-font);
+  padding: 4px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.rm-mini:hover {
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+.rm-msg pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}
+
+.rm-mermaid {
+  margin-top: 10px;
+  border: 1px solid var(--rm-border);
+  border-radius: 14px;
+  padding: 10px;
+  background: rgba(2, 6, 23, 0.18);
+}
+
+.rm-mermaid-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  justify-content: space-between;
+}
+
+.rm-mermaid-toolbar .rm-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rm-badge {
+  font-size: 11px;
+  color: var(--rm-muted);
+  border: 1px solid var(--rm-border);
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.rm-mermaid-diagram {
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 8px;
+  background: rgba(2, 6, 23, 0.22);
+  overflow: auto;
+  max-height: 320px;
+}
+
+.rm-mermaid-diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.rm-mermaid-code {
+  margin-top: 8px;
+}
+
+.rm-composer {
+  border-top: 1px solid var(--rm-border);
+  padding: 10px 12px;
+  background: rgba(2, 6, 23, 0.28);
+}
+
+.rm-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.rm-textarea {
+  flex: 1;
+  resize: none;
+  min-height: 44px;
+  max-height: 160px;
+  border-radius: 12px;
+  border: 1px solid var(--rm-border);
+  padding: 10px 10px;
+  background: rgba(15, 23, 42, 0.65);
+  color: var(--rm-text);
+  font: 12px/1.35 var(--rm-font);
+}
+
+.rm-send {
+  width: 78px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(34, 197, 94, 0.6);
+  background: rgba(34, 197, 94, 0.14);
+  color: var(--rm-text);
+  font: 800 12px/1 var(--rm-font);
+  cursor: pointer;
+}
+
+.rm-send:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.rm-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  align-items: center;
+  color: var(--rm-muted);
+  font-size: 11px;
+}
+
+.rm-toggles {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.rm-toggle {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  user-select: none;
+}
+
+.rm-kbd {
+  border: 1px solid var(--rm-border);
+  background: rgba(15, 23, 42, 0.55);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 11px;
+}

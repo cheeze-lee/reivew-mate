@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "ReviewMate (GitHub AI Review Helper)",
+  "version": "0.1.0",
+  "description": "GitHub PR 리뷰 화면에서 선택한 코드로 바로 LLM 질의응답/리뷰 코멘트 초안을 생성합니다.",
+  "permissions": ["storage"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": {
+    "service_worker": "src/service_worker.js",
+    "type": "module"
+  },
+  "options_ui": {
+    "page": "src/options.html",
+    "open_in_tab": true
+  },
+  "action": {
+    "default_title": "ReviewMate"
+  },
+  "commands": {
+    "toggle-panel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+L",
+        "mac": "Command+Shift+L"
+      },
+      "description": "ReviewMate 패널 토글"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*/*/pull/*"],
+      "js": ["src/vendor/mermaid.min.js", "src/content_script.js"],
+      "css": ["src/ui.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

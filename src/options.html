@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ReviewMate 옵션</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --panel: #0f172a;
+        --border: rgba(148, 163, 184, 0.25);
+        --text: #e2e8f0;
+        --muted: rgba(226, 232, 240, 0.72);
+        --accent: #22c55e;
+        --danger: #ef4444;
+        --radius: 14px;
+        --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      }
+
+      body {
+        margin: 0;
+        background: radial-gradient(1200px 700px at 10% 10%, rgba(56, 189, 248, 0.12), transparent 60%),
+          radial-gradient(900px 520px at 90% 15%, rgba(34, 197, 94, 0.14), transparent 55%),
+          var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+      }
+
+      .wrap {
+        max-width: 960px;
+        margin: 28px auto;
+        padding: 0 18px;
+      }
+
+      .card {
+        background: rgba(15, 23, 42, 0.82);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+      }
+
+      header {
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 16px;
+        letter-spacing: 0.2px;
+      }
+
+      header p {
+        margin: 4px 0 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .grid {
+        padding: 18px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      input,
+      textarea,
+      select {
+        width: 100%;
+        box-sizing: border-box;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 10px 10px;
+        background: rgba(2, 6, 23, 0.35);
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      textarea {
+        min-height: 160px;
+        resize: vertical;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .full {
+        grid-column: 1 / -1;
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 14px 18px 18px;
+        border-top: 1px solid var(--border);
+        background: rgba(2, 6, 23, 0.18);
+      }
+
+      .btn {
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.75);
+        color: var(--text);
+        padding: 10px 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .btn.primary {
+        border-color: rgba(34, 197, 94, 0.6);
+        background: rgba(34, 197, 94, 0.14);
+      }
+
+      .btn.danger {
+        border-color: rgba(239, 68, 68, 0.6);
+        background: rgba(239, 68, 68, 0.1);
+      }
+
+      .status {
+        margin-right: auto;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 12px;
+        margin: 0;
+      }
+
+      .notice {
+        grid-column: 1 / -1;
+        border: 1px solid rgba(239, 68, 68, 0.45);
+        background: rgba(239, 68, 68, 0.09);
+        border-radius: 12px;
+        padding: 12px 12px;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .notice strong {
+        display: block;
+        margin-bottom: 6px;
+        color: rgba(254, 202, 202, 0.95);
+        letter-spacing: 0.1px;
+      }
+
+      .notice code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+        font-size: 12px;
+        padding: 1px 6px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: rgba(2, 6, 23, 0.45);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <header>
+          <div>
+            <h1>ReviewMate 옵션</h1>
+            <p>브라우저에서 API 키 / base_url / org_id 등을 설정합니다.</p>
+          </div>
+          <p class="hint">변경 후 저장, 필요하면 연결 테스트</p>
+        </header>
+
+        <div class="grid">
+          <div class="notice">
+            <strong>보안 경고</strong>
+            API Key 및 설정값은 이 브라우저 프로필의 <code>chrome.storage.local</code>에 로컬로만 저장되며(동기화/암호화
+            없음), 같은 기기/프로필에 접근 가능한 사용자 또는 악성코드가 탈취할 수 있습니다. 또한 PR 별 대화 기록(최근 일부)은
+            로컬에 남을 수 있습니다. 공유 PC에서는 사용하지 말고, 필요 시 <b>키 삭제</b>로 즉시 제거하세요.
+          </div>
+
+          <div>
+            <label for="apiKey">API Key</label>
+            <input id="apiKey" type="password" autocomplete="off" placeholder="sk-..." />
+          </div>
+
+          <div>
+            <label for="baseUrl">Base URL</label>
+            <input id="baseUrl" type="text" placeholder="https://api.openai.com/v1" />
+          </div>
+
+          <div>
+            <label for="orgId">Organization ID (Optional)</label>
+            <input id="orgId" type="text" placeholder="org_..." />
+          </div>
+
+          <div>
+            <label for="projectId">Project ID (Optional)</label>
+            <input id="projectId" type="text" placeholder="proj_..." />
+          </div>
+
+          <div>
+            <label for="apiMode">API 모드</label>
+            <select id="apiMode">
+              <option value="responses">Responses API (권장)</option>
+              <option value="chat_completions">Chat Completions (호환)</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="model">Model</label>
+            <input id="model" type="text" placeholder="gpt-5" />
+          </div>
+
+          <div class="full">
+            <label for="developerPrompt">Developer Prompt (항상 앞에 붙는 지시문)</label>
+            <textarea
+              id="developerPrompt"
+              spellcheck="false"
+              placeholder="예: 당신은 시니어 리뷰어..."
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="status" id="status">대기 중</div>
+          <button class="btn" id="test" type="button">연결 테스트</button>
+          <button class="btn primary" id="save" type="button">저장</button>
+          <button class="btn danger" id="wipeKey" type="button">키 삭제</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./options.js"></script>
+  </body>
+</html>
